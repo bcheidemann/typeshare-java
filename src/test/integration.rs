@@ -1,0 +1,52 @@
+use std::fs;
+
+use assert_cmd::Command;
+use fixtures::fixtures;
+
+#[fixtures("src/test/fixtures/*")]
+fn integration_test(test_case_path: &std::path::Path) {
+    let stdout = fs::read_to_string(test_case_path.join("stdout")).ok();
+    let stderr = fs::read_to_string(test_case_path.join("stdout")).ok();
+    let exitcode = fs::read_to_string(test_case_path.join("exitcode"))
+        .ok()
+        .map(|exitcode| exitcode.parse::<i32>().expect("to be a valid usize"));
+    let output = fs::read_to_string(test_case_path.join("output.java")).ok();
+
+    let temp_output_path = tempfile::tempdir()
+        .expect("output directory to be created")
+        .path()
+        .join("output.java");
+
+    let mut assert = Command::cargo_bin(env!("CARGO_PKG_NAME"))
+        .expect("binary to execute")
+        .args(vec![
+            "--java-package",
+            "com.typeshare.java",
+            "--config",
+            "src/test/typeshare.toml",
+            "--output-file",
+            temp_output_path.to_str().expect("to be UTF-8"),
+            test_case_path.to_str().expect("to be UTF-8"),
+        ])
+        .assert();
+
+    if let Some(stdout) = stdout {
+        assert = assert.stdout(stdout);
+    }
+
+    if let Some(stderr) = stderr {
+        assert = assert.stderr(stderr);
+    }
+
+    if let Some(exitcode) = exitcode {
+        assert = assert.code(exitcode);
+    }
+
+    if let Some(output) = output {
+        let actual_output =
+            fs::read_to_string(&temp_output_path).expect("output file to have been created");
+        pretty_assertions::assert_eq!(output.trim(), actual_output.trim());
+    }
+
+    drop(assert);
+}
