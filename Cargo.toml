@@ -3,6 +3,9 @@ name = "typeshare-java"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+readme = "README.md"
+description = "Typeshare CLI for generating Java types"
+repository = "https://github.com/bcheidemann/typeshare-java"
 
 [dependencies]
 anyhow = "1.0.98"
