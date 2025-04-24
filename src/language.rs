@@ -99,7 +99,7 @@ impl Language<'_> for Java {
             HeaderComment::Custom { comment } => {
                 writeln!(w, "/**")?;
                 for comment in comment.split("\n") {
-                    writeln!(w, " * {}", comment)?;
+                    writeln!(w, " * {comment}")?;
                 }
                 writeln!(w, " */")?;
                 writeln!(w)?;
@@ -110,7 +110,7 @@ impl Language<'_> for Java {
             if let FilesMode::Multi(crate_name) = mode {
                 writeln!(w, "package {}.{};", package, crate_name.as_str())?;
             } else {
-                writeln!(w, "package {};", package)?;
+                writeln!(w, "package {package};")?;
             }
             writeln!(w)?;
         }
@@ -160,9 +160,11 @@ impl Language<'_> for Java {
             "public record {}{}{}(",
             self.config.prefix.as_ref().unwrap_or(&String::default()),
             rs.id.renamed,
-            (!rs.generic_types.is_empty())
-                .then(|| format!("<{}>", rs.generic_types.join(", ")))
-                .unwrap_or_default()
+            if !rs.generic_types.is_empty() {
+                format!("<{}>", rs.generic_types.join(", "))
+            } else {
+                "".to_string()
+            }
         )?;
 
         if let Some((last, elements)) = rs.fields.split_last() {
