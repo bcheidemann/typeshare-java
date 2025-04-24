@@ -41,8 +41,28 @@ fn integration_test(test_case_path: &std::path::Path) {
     }
 
     if let Some(output) = output {
-        let actual_output =
-            fs::read_to_string(&temp_output_path).expect("output file to have been created");
+        let actual_output = match fs::read_to_string(&temp_output_path) {
+            Ok(output) => output,
+            Err(_) => {
+                eprintln!();
+                eprintln!("--stdout--");
+                eprintln!(
+                    "{}",
+                    String::from_utf8_lossy(assert.get_output().stdout.as_slice())
+                );
+                eprintln!("--end stdout--");
+                eprintln!("--stderr--");
+                eprintln!(
+                    "{}",
+                    String::from_utf8_lossy(assert.get_output().stderr.as_slice())
+                );
+                eprintln!("--end stderr--");
+                panic!(
+                    "Failed to open {}",
+                    temp_output_path.to_str().expect("to be UTF-8")
+                );
+            }
+        };
         if std::env::var_os("UPDATE").is_some() {
             if output != actual_output {
                 eprintln!(
