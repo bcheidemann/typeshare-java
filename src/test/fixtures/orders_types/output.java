@@ -1,22 +1,27 @@
 package com.typeshare.java;
 
-public record A(
-	long field
-) {}
+public class Namespace {
 
-public record B(
-	A dependsOn
-) {}
+	public record A(
+		long field
+	) {}
 
-public record C(
-	B dependsOn
-) {}
+	public record B(
+		A dependsOn
+	) {}
 
-public record E(
-	D dependsOn
-) {}
+	public record C(
+		B dependsOn
+	) {}
 
-public record D(
-	C dependsOn,
-	E alsoDependsOn
-) {}
+	public record E(
+		D dependsOn
+	) {}
+
+	public record D(
+		C dependsOn,
+		E alsoDependsOn
+	) {}
+
+}
+

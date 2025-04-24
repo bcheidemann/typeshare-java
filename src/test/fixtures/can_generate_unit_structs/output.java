@@ -1,3 +1,8 @@
 package com.typeshare.java;
 
-public record UnitStruct() {}
+public class Namespace {
+
+	public record UnitStruct() {}
+
+}
+

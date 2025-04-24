@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use convert_case::{Case, Casing as _};
 use typeshare_model::Language;
 use typeshare_model::prelude::*;
@@ -5,6 +7,7 @@ use typeshare_model::prelude::*;
 use crate::config::HeaderComment;
 use crate::config::JavaConfig;
 use crate::error::FormatSpecialTypeError;
+use crate::util::indented_writer::IndentedWriter;
 
 #[derive(Debug)]
 pub struct Java {
@@ -79,11 +82,7 @@ impl Language<'_> for Java {
         })
     }
 
-    fn begin_file(
-        &self,
-        w: &mut impl std::io::Write,
-        mode: FilesMode<&CrateName>,
-    ) -> anyhow::Result<()> {
+    fn begin_file(&self, w: &mut impl Write, mode: FilesMode<&CrateName>) -> anyhow::Result<()> {
         match &self.config.header_comment {
             HeaderComment::None => {}
             HeaderComment::Default => {
@@ -108,11 +107,32 @@ impl Language<'_> for Java {
 
         if let Some(package) = &self.config.package {
             if let FilesMode::Multi(crate_name) = mode {
-                writeln!(w, "package {}.{};", package, crate_name.as_str())?;
+                writeln!(
+                    w,
+                    "package {}.{};",
+                    package,
+                    crate_name.as_str().to_case(Case::Pascal)
+                )?;
             } else {
                 writeln!(w, "package {package};")?;
             }
             writeln!(w)?;
+        }
+
+        match (self.config.namespace_class, mode) {
+            (true, FilesMode::Multi(crate_name)) => {
+                writeln!(
+                    w,
+                    "public class {} {{",
+                    crate_name.as_str().to_case(Case::Pascal),
+                )?;
+                writeln!(w)?;
+            }
+            (true, FilesMode::Single) => {
+                writeln!(w, "public class Namespace {{",)?;
+                writeln!(w)?;
+            }
+            _ => {}
         }
 
         Ok(())
@@ -120,7 +140,7 @@ impl Language<'_> for Java {
 
     fn write_imports<'a, Crates, Types>(
         &self,
-        writer: &mut impl std::io::Write,
+        writer: &mut impl Write,
         _crate_name: &CrateName,
         imports: Crates,
     ) -> anyhow::Result<()>
@@ -144,19 +164,27 @@ impl Language<'_> for Java {
         writeln!(writer).map_err(|err| err.into())
     }
 
-    fn write_type_alias(
-        &self,
-        _w: &mut impl std::io::Write,
-        _t: &RustTypeAlias,
-    ) -> anyhow::Result<()> {
+    fn end_file(&self, w: &mut impl Write, _mode: FilesMode<&CrateName>) -> anyhow::Result<()> {
+        if self.config.namespace_class {
+            writeln!(w, "}}")?;
+            writeln!(w)?;
+        }
+
+        Ok(())
+    }
+
+    fn write_type_alias(&self, _w: &mut impl Write, _t: &RustTypeAlias) -> anyhow::Result<()> {
         todo!("type aliases are not supported yet")
     }
 
-    fn write_struct(&self, w: &mut impl std::io::Write, rs: &RustStruct) -> anyhow::Result<()> {
-        self.write_comments(w, 0, &rs.comments)?;
+    fn write_struct(&self, w: &mut impl Write, rs: &RustStruct) -> anyhow::Result<()> {
+        let mut indented_writer =
+            IndentedWriter::new(w, if self.config.namespace_class { 1 } else { 0 });
+
+        self.write_comments(&mut indented_writer, 0, &rs.comments)?;
 
         write!(
-            w,
+            indented_writer,
             "public record {}{}{}(",
             self.config.prefix.as_ref().unwrap_or(&String::default()),
             rs.id.renamed,
@@ -168,37 +196,39 @@ impl Language<'_> for Java {
         )?;
 
         if let Some((last, elements)) = rs.fields.split_last() {
-            writeln!(w)?;
+            writeln!(indented_writer)?;
             for f in elements.iter() {
-                self.write_element(w, f, rs.generic_types.as_slice())?;
-                writeln!(w, ",")?;
+                self.write_element(&mut indented_writer, f, rs.generic_types.as_slice())?;
+                writeln!(indented_writer, ",")?;
             }
-            self.write_element(w, last, rs.generic_types.as_slice())?;
-            writeln!(w)?;
+            self.write_element(&mut indented_writer, last, rs.generic_types.as_slice())?;
+            writeln!(indented_writer)?;
         }
 
-        writeln!(w, r") {{}}")?;
-
-        writeln!(w)?;
+        writeln!(indented_writer, r") {{}}")?;
+        writeln!(indented_writer)?;
 
         Ok(())
     }
 
-    fn write_enum(&self, w: &mut impl std::io::Write, e: &RustEnum) -> anyhow::Result<()> {
+    fn write_enum(&self, w: &mut impl Write, e: &RustEnum) -> anyhow::Result<()> {
         // TODO: Generate named types for any anonymous struct variants of this enum
 
-        self.write_comments(w, 0, &e.shared().comments)?;
+        let mut indented_writer =
+            IndentedWriter::new(w, if self.config.namespace_class { 1 } else { 0 });
+
+        self.write_comments(&mut indented_writer, 0, &e.shared().comments)?;
 
         match e {
             RustEnum::Unit {
                 shared,
                 unit_variants,
-            } => self.write_unit_enum(w, shared, unit_variants),
+            } => self.write_unit_enum(&mut indented_writer, shared, unit_variants),
             RustEnum::Algebraic { .. } => todo!("algebraic enums are not supported yet"),
         }
     }
 
-    fn write_const(&self, _w: &mut impl std::io::Write, _c: &RustConst) -> anyhow::Result<()> {
+    fn write_const(&self, _w: &mut impl Write, _c: &RustConst) -> anyhow::Result<()> {
         todo!("constants are not supported yet")
     }
 }
@@ -320,7 +350,7 @@ impl Java {
 
     fn write_element(
         &self,
-        w: &mut impl std::io::Write,
+        w: &mut impl Write,
         f: &RustField,
         generic_types: &[TypeName],
     ) -> anyhow::Result<()> {
@@ -337,7 +367,7 @@ impl Java {
 
     fn write_unit_enum(
         &self,
-        w: &mut impl std::io::Write,
+        w: &mut impl Write,
         shared: &RustEnumShared,
         unit_variants: &[RustEnumVariantShared],
     ) -> anyhow::Result<()> {
@@ -372,7 +402,7 @@ impl Java {
 
     fn write_comment(
         &self,
-        w: &mut impl std::io::Write,
+        w: &mut impl Write,
         indent: usize,
         comment: &str,
     ) -> std::io::Result<()> {
@@ -382,7 +412,7 @@ impl Java {
 
     fn write_comments(
         &self,
-        w: &mut impl std::io::Write,
+        w: &mut impl Write,
         indent: usize,
         comments: &[String],
     ) -> std::io::Result<()> {

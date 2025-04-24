@@ -20,8 +20,6 @@ fn integration_test(test_case_path: &std::path::Path) {
     let mut assert = Command::cargo_bin(env!("CARGO_PKG_NAME"))
         .expect("binary to execute")
         .args(vec![
-            "--java-package",
-            "com.typeshare.java",
             "--config",
             "src/test/typeshare.toml",
             "--output-file",
@@ -45,7 +43,21 @@ fn integration_test(test_case_path: &std::path::Path) {
     if let Some(output) = output {
         let actual_output =
             fs::read_to_string(&temp_output_path).expect("output file to have been created");
-        pretty_assertions::assert_eq!(output.trim(), actual_output.trim());
+        if std::env::var_os("UPDATE").is_some() {
+            if output != actual_output {
+                eprintln!(
+                    "Updating {}...",
+                    test_case_path
+                        .join("output.java")
+                        .to_str()
+                        .expect("to be UTF-8")
+                );
+                fs::write(test_case_path.join("output.java"), actual_output)
+                    .expect("to successfully update output.java");
+            }
+        } else {
+            pretty_assertions::assert_eq!(output, actual_output);
+        }
     }
 
     drop(assert);

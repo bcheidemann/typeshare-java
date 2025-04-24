@@ -13,6 +13,8 @@ pub struct JavaConfig {
     pub prefix: Option<String>,
     /// Conversions from Rust type names to Java type names
     pub type_mappings: HashMap<String, String>,
+    /// Whether generated Java classes should be wrapped in a namespace class
+    pub namespace_class: bool,
 }
 
 impl Default for JavaConfig {
@@ -22,6 +24,7 @@ impl Default for JavaConfig {
             package: None,
             prefix: None,
             type_mappings: HashMap::with_capacity(0),
+            namespace_class: true,
         }
     }
 }

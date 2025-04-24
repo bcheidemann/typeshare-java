@@ -659,7 +659,6 @@ dependencies = [
  "assert_cmd",
  "convert_case",
  "fixtures",
- "itertools",
  "pretty_assertions",
  "serde",
  "tempfile",

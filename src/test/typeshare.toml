@@ -1,2 +1,5 @@
-[java.header_comment]
-type = "None"
+[java]
+header_comment = { type = "None" }
+package = "com.typeshare.java"
+type_mappings = {}
+namespace_class = true

@@ -1,5 +1,10 @@
 package com.typeshare.java;
 
-public record SomeStruct(
-	long field_a
-) {}
+public class Namespace {
+
+	public record SomeStruct(
+		long field_a
+	) {}
+
+}
+

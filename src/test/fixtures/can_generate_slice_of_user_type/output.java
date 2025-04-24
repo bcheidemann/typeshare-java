@@ -1,5 +1,10 @@
 package com.typeshare.java;
 
-public record Video(
-	Tag[] tags
-) {}
+public class Namespace {
+
+	public record Video(
+		Tag[] tags
+	) {}
+
+}
+

@@ -1,3 +1,8 @@
 package com.typeshare.java;
 
-public record MyEmptyStruct() {}
+public class Namespace {
+
+	public record MyEmptyStruct() {}
+
+}
+

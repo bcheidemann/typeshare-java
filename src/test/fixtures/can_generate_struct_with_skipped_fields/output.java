@@ -1,6 +1,11 @@
 package com.typeshare.java;
 
-public record MyStruct(
-	int a,
-	int c
-) {}
+public class Namespace {
+
+	public record MyStruct(
+		int a,
+		int c
+	) {}
+
+}
+
