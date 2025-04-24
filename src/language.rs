@@ -1,5 +1,4 @@
 use convert_case::{Case, Casing as _};
-use itertools::Itertools as _;
 use typeshare_model::Language;
 use typeshare_model::prelude::*;
 
@@ -12,7 +11,7 @@ pub struct Java {
     config: JavaConfig,
 }
 
-impl<'config> Language<'config> for Java {
+impl Language<'_> for Java {
     type Config = JavaConfig;
 
     const NAME: &'static str = "java";
@@ -329,7 +328,7 @@ impl Java {
             w,
             "\t{} {}",
             ty,
-            self.santitize_itentifier(&f.id.renamed.as_str()),
+            self.santitize_itentifier(f.id.renamed.as_str()),
         )
         .map_err(|err| err.into())
     }
@@ -353,14 +352,14 @@ impl Java {
                 writeln!(
                     w,
                     "\t{},",
-                    self.santitize_itentifier(&variant.id.renamed.as_str()),
+                    self.santitize_itentifier(variant.id.renamed.as_str()),
                 )?;
             }
             self.write_comments(w, 1, &last_variant.comments)?;
             writeln!(
                 w,
                 "\t{}",
-                self.santitize_itentifier(&last_variant.id.renamed.as_str()),
+                self.santitize_itentifier(last_variant.id.renamed.as_str()),
             )?;
         }
 
@@ -388,19 +387,5 @@ impl Java {
         comments
             .iter()
             .try_for_each(|comment| self.write_comment(w, indent, comment))
-    }
-
-    fn indent(&self, str: impl AsRef<str>, count: usize) -> String {
-        let indentation = "    ".repeat(count);
-        str.as_ref()
-            .split('\n')
-            .map(|line| {
-                if line.is_empty() {
-                    line.to_string()
-                } else {
-                    format!("{indentation}{line}")
-                }
-            })
-            .join("\n")
     }
 }
