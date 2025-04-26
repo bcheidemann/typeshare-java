@@ -3,21 +3,25 @@ pub enum BestHockeyTeams {
     PittsburghPenguins,
 }
 
-#[typeshare(swift = "Equatable")]
+#[typeshare(java(annotations = "@Getter"))]
 pub enum BestHockeyTeams1 {
     PittsburghPenguins,
 }
 
-#[typeshare(swift = "Equatable, Comparable, Hashable")]
+#[typeshare(java(annotations = "@JsonAdapter(MyCustomAdapter.class)"))]
 pub enum BestHockeyTeams2 {
     PittsburghPenguins,
 }
 
-#[typeshare(kotlin = "idk")]
+#[typeshare(java(annotations = "
+    @Getter
+    @JsonAdapter(MyCustomAdapter.class)
+"))]
 pub enum BestHockeyTeams3 {
     PittsburghPenguins,
 }
-#[typeshare(swift = "Equatable", swift = "Hashable")]
+
+#[typeshare(java(annotations = "@DecoratorWithStringArgument(\"test\")"))]
 pub enum BestHockeyTeams4 {
     PittsburghPenguins,
 }

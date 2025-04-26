@@ -6,5 +6,5 @@ public class Namespace {
 	public enum Colors {
 		Green
 	}
-}
 
+}

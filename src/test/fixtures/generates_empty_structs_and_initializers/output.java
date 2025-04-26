@@ -5,4 +5,3 @@ public class Namespace {
 	public record MyEmptyStruct() {}
 
 }
-

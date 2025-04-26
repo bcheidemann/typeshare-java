@@ -2,11 +2,14 @@ use std::io::Write;
 
 use convert_case::{Case, Casing as _};
 use typeshare_model::Language;
+use typeshare_model::decorator;
+use typeshare_model::decorator::DecoratorSet;
 use typeshare_model::prelude::*;
 
 use crate::config::HeaderComment;
 use crate::config::JavaConfig;
 use crate::error::FormatSpecialTypeError;
+use crate::error::WriteDecoratorError;
 use crate::util::indented_writer::IndentedWriter;
 
 #[derive(Debug)]
@@ -167,7 +170,6 @@ impl Language<'_> for Java {
     fn end_file(&self, w: &mut impl Write, _mode: FilesMode<&CrateName>) -> anyhow::Result<()> {
         if self.config.namespace_class {
             writeln!(w, "}}")?;
-            writeln!(w)?;
         }
 
         Ok(())
@@ -223,9 +225,13 @@ impl Language<'_> for Java {
             RustEnum::Unit {
                 shared,
                 unit_variants,
-            } => self.write_unit_enum(&mut indented_writer, shared, unit_variants),
+            } => self.write_unit_enum(&mut indented_writer, shared, unit_variants)?,
             RustEnum::Algebraic { .. } => todo!("algebraic enums are not supported yet"),
         }
+
+        writeln!(w)?;
+
+        Ok(())
     }
 
     fn write_const(&self, _w: &mut impl Write, _c: &RustConst) -> anyhow::Result<()> {
@@ -371,6 +377,8 @@ impl Java {
         shared: &RustEnumShared,
         unit_variants: &[RustEnumVariantShared],
     ) -> anyhow::Result<()> {
+        self.write_annotations(w, &shared.decorators)?;
+
         writeln!(
             w,
             "public enum {}{} {{",
@@ -396,6 +404,47 @@ impl Java {
         }
 
         writeln!(w, "}}")?;
+
+        Ok(())
+    }
+
+    fn write_annotations(
+        &self,
+        w: &mut impl Write,
+        decorator_set: &DecoratorSet,
+    ) -> anyhow::Result<()> {
+        for decorator_value in decorator_set.get_all(Self::NAME) {
+            match decorator_value {
+                typeshare_model::decorator::Value::Nested(decorator_set) => {
+                    let annotations = decorator_set.get_all("annotations");
+                    self.write_java_annotations(w, annotations)?;
+                }
+                _ => {}
+            }
+        }
+
+        Ok(())
+    }
+
+    fn write_java_annotations(
+        &self,
+        w: &mut impl Write,
+        annotations: &[decorator::Value],
+    ) -> anyhow::Result<()> {
+        for annotation in annotations {
+            match annotation {
+                decorator::Value::String(annotations) => {
+                    for annotation in annotations
+                        .split("\n")
+                        .map(str::trim)
+                        .filter(|str| !str.is_empty())
+                    {
+                        writeln!(w, "{annotation}")?;
+                    }
+                }
+                _ => return Err(WriteDecoratorError::InvalidAnnotation(annotation.clone()).into()),
+            }
+        }
 
         Ok(())
     }

@@ -10,5 +10,5 @@ public class Namespace {
 		/// Green is a cool color
 		Green
 	}
-}
 
+}
