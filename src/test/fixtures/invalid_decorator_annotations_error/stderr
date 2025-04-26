@@ -1,0 +1,7 @@
+TARGET None
+Error: failed to generate typeshared code for language java
+
+Caused by:
+    0: error generating typeshare types
+    1: error writing enum Colors
+    2: Invalid annotation: Bool(true)
