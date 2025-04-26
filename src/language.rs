@@ -414,12 +414,9 @@ impl Java {
         decorator_set: &DecoratorSet,
     ) -> anyhow::Result<()> {
         for decorator_value in decorator_set.get_all(Self::NAME) {
-            match decorator_value {
-                typeshare_model::decorator::Value::Nested(decorator_set) => {
-                    let annotations = decorator_set.get_all("annotations");
-                    self.write_java_annotations(w, annotations)?;
-                }
-                _ => {}
+            if let decorator::Value::Nested(decorator_set) = decorator_value {
+                let annotations = decorator_set.get_all("annotations");
+                self.write_java_annotations(w, annotations)?;
             }
         }
 

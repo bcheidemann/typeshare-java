@@ -16,7 +16,7 @@ impl<'a, W: Write> IndentedWriter<'a, W> {
     }
 }
 
-impl<'a, W: Write> Write for IndentedWriter<'a, W> {
+impl<W: Write> Write for IndentedWriter<'_, W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let indent = "\t".repeat(self.indent_count);
         let indent_bytes = indent.as_bytes();
