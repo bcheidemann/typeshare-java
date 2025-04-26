@@ -6,7 +6,7 @@ use fixtures::fixtures;
 #[fixtures("src/test/fixtures/*")]
 fn integration_test(test_case_path: &std::path::Path) {
     let stdout = fs::read_to_string(test_case_path.join("stdout")).ok();
-    let stderr = fs::read_to_string(test_case_path.join("stdout")).ok();
+    let stderr = fs::read_to_string(test_case_path.join("stderr")).ok();
     let exitcode = fs::read_to_string(test_case_path.join("exitcode"))
         .ok()
         .map(|exitcode| exitcode.parse::<i32>().expect("to be a valid usize"));
