@@ -186,7 +186,7 @@ impl Language<'_> for Java {
         let mut indented_writer =
             IndentedWriter::new(w, if self.config.namespace_class { 1 } else { 0 });
 
-        self.write_comments(&mut indented_writer, 0, &rs.comments)?;
+        self.write_multiline_comment(&mut indented_writer, 0, &rs.comments)?;
 
         write!(
             indented_writer,
@@ -222,7 +222,7 @@ impl Language<'_> for Java {
         let mut indented_writer =
             IndentedWriter::new(w, if self.config.namespace_class { 1 } else { 0 });
 
-        self.write_comments(&mut indented_writer, 0, &e.shared().comments)?;
+        self.write_multiline_comment(&mut indented_writer, 0, &e.shared().comments)?;
         self.write_annotations(&mut indented_writer, &e.shared().decorators)?;
 
         match e {
@@ -405,7 +405,7 @@ impl Java {
         f: &RustField,
         generic_types: &[TypeName],
     ) -> anyhow::Result<()> {
-        self.write_comments(w, 1, &f.comments)?;
+        self.write_multiline_comment(w, 1, &f.comments)?;
         let ty = self.format_type(&f.ty, generic_types)?;
         write!(
             w,
@@ -435,14 +435,14 @@ impl Java {
 
         if let Some((last_variant, variants)) = unit_variants.split_last() {
             for variant in variants {
-                self.write_comments(w, 1, &variant.comments)?;
+                self.write_multiline_comment(w, 1, &variant.comments)?;
                 writeln!(
                     w,
                     "\t{},",
                     self.santitize_itentifier(variant.id.renamed.as_str()),
                 )?;
             }
-            self.write_comments(w, 1, &last_variant.comments)?;
+            self.write_multiline_comment(w, 1, &last_variant.comments)?;
             writeln!(
                 w,
                 "\t{}",
@@ -527,7 +527,7 @@ impl Java {
         let mut indented_writer = IndentedWriter::new(w, 1);
 
         for variant in variants {
-            self.write_comments(&mut indented_writer, 0, &variant.shared().comments)?;
+            self.write_multiline_comment(&mut indented_writer, 0, &variant.shared().comments)?;
 
             match variant {
                 RustEnumVariant::Unit(shared) => self.write_algebraic_enum_unit_variant_gson(
@@ -944,24 +944,32 @@ impl Java {
         Ok(())
     }
 
-    fn write_comment(
+    fn write_multiline_comment_line(
         &self,
         w: &mut impl Write,
         indent: usize,
         comment: &str,
     ) -> std::io::Result<()> {
-        writeln!(w, "{}/// {}", "\t".repeat(indent), comment)?;
+        writeln!(w, "{} * {}", "\t".repeat(indent), comment)?;
         Ok(())
     }
 
-    fn write_comments(
+    fn write_multiline_comment(
         &self,
         w: &mut impl Write,
         indent: usize,
-        comments: &[String],
+        comment_lines: &[String],
     ) -> std::io::Result<()> {
-        comments
+        if comment_lines.is_empty() {
+            return Ok(());
+        }
+
+        writeln!(w, "{}/**", "\t".repeat(indent))?;
+        comment_lines
             .iter()
-            .try_for_each(|comment| self.write_comment(w, indent, comment))
+            .try_for_each(|comment| self.write_multiline_comment_line(w, indent, comment))?;
+        writeln!(w, "{} */", "\t".repeat(indent))?;
+
+        Ok(())
     }
 }

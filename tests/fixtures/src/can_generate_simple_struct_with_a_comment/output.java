@@ -4,9 +4,13 @@ public class Namespace {
 
 	public record Location() {}
 
-	/// This is a comment.
+	/**
+	 * This is a comment.
+	 */
 	public record Person(
-		/// This is another comment
+		/**
+		 * This is another comment
+		 */
 		String name,
 		Short age,
 		String info,

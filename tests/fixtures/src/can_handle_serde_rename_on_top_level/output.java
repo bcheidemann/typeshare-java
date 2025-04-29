@@ -4,7 +4,9 @@ public class Namespace {
 
 	public record OtherType() {}
 
-	/// This is a comment.
+	/**
+	 * This is a comment.
+	 */
 	public record PersonTwo(
 		String name,
 		Short age,

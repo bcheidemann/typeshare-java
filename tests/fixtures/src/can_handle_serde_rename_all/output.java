@@ -2,7 +2,9 @@ package com.typeshare.java;
 
 public class Namespace {
 
-	/// This is a Person struct with camelCase rename
+	/**
+	 * This is a Person struct with camelCase rename
+	 */
 	public record Person(
 		String firstName,
 		String lastName,
@@ -11,7 +13,9 @@ public class Namespace {
 		java.util.ArrayList<String> extraSpecialField2
 	) {}
 
-	/// This is a Person2 struct with UPPERCASE rename
+	/**
+	 * This is a Person2 struct with UPPERCASE rename
+	 */
 	public record Person2(
 		String FIRST_NAME,
 		String LAST_NAME,

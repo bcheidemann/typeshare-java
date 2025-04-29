@@ -2,10 +2,14 @@ package com.typeshare.java;
 
 public class Namespace {
 
-	/// Struct comment
+	/**
+	 * Struct comment
+	 */
 	public record ItemDetailsFieldValue() {}
 
-	/// Enum comment
+	/**
+	 * Enum comment
+	 */
 	@com.google.gson.annotations.JsonAdapter(_AdvancedColorsAdapter.class)
 	public sealed interface AdvancedColors
 		permits
@@ -20,7 +24,9 @@ public class Namespace {
 		@com.google.gson.annotations.JsonAdapter(_AdvancedColorsAdapter.class)
 		public record None() implements AdvancedColors {}
 
-		/// This is a case comment
+		/**
+		 * This is a case comment
+		 */
 		@com.google.gson.annotations.JsonAdapter(_AdvancedColorsAdapter.class)
 		public record MyString(String content) implements AdvancedColors {}
 
@@ -33,7 +39,9 @@ public class Namespace {
 		@com.google.gson.annotations.JsonAdapter(_AdvancedColorsAdapter.class)
 		public record NumberArray(java.util.ArrayList<Integer> content) implements AdvancedColors {}
 
-		/// Comment on the last element
+		/**
+		 * Comment on the last element
+		 */
 		@com.google.gson.annotations.JsonAdapter(_AdvancedColorsAdapter.class)
 		public record ReallyCoolType(ItemDetailsFieldValue content) implements AdvancedColors {}
 

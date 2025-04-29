@@ -2,7 +2,9 @@ package com.typeshare.java;
 
 public class Namespace {
 
-	/// Not much color in this enum
+	/**
+	 * Not much color in this enum
+	 */
 	@SomeAnnotation
 	@com.google.gson.annotations.JsonAdapter(_ColorAdapter.class)
 	public sealed interface Color
