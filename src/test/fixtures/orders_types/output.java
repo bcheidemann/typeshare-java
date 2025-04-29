@@ -3,7 +3,7 @@ package com.typeshare.java;
 public class Namespace {
 
 	public record A(
-		long field
+		Long field
 	) {}
 
 	public record B(

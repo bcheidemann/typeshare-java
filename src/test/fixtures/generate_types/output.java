@@ -7,13 +7,13 @@ public class Namespace {
 	public record Types(
 		String s,
 		String static_s,
-		byte int8,
-		float _float,
-		double _double,
+		Byte int8,
+		Float _float,
+		Double _double,
 		java.util.ArrayList<String> array,
 		String[] fixed_length_array,
-		java.util.HashMap<String, int> dictionary,
-		java.util.HashMap<String, int> optional_dictionary,
+		java.util.HashMap<String, Integer> dictionary,
+		java.util.HashMap<String, Integer> optional_dictionary,
 		CustomType custom_type
 	) {}
 

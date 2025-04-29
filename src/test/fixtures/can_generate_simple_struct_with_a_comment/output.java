@@ -8,7 +8,7 @@ public class Namespace {
 	public record Person(
 		/// This is another comment
 		String name,
-		short age,
+		Short age,
 		String info,
 		java.util.ArrayList<String> emails,
 		Location location

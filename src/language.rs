@@ -60,23 +60,23 @@ impl Language<'_> for Java {
             // https://docs.oracle.com/javase/specs/jls/se23/html/jls-4.html#jls-IntegralType
             // Char in Java is 16 bits long, so we need to use String
             SpecialRustType::String | SpecialRustType::Char => "String".into(),
-            SpecialRustType::I8 => "byte".into(),
-            SpecialRustType::I16 => "short".into(),
-            SpecialRustType::ISize | SpecialRustType::I32 => "int".into(),
-            SpecialRustType::I54 | SpecialRustType::I64 => "long".into(),
+            SpecialRustType::I8 => "Byte".into(),
+            SpecialRustType::I16 => "Short".into(),
+            SpecialRustType::ISize | SpecialRustType::I32 => "Integer".into(),
+            SpecialRustType::I54 | SpecialRustType::I64 => "Long".into(),
             // byte in Java is signed, so we need to use short to represent all possible values
-            SpecialRustType::U8 => "short".into(),
+            SpecialRustType::U8 => "Short".into(),
             // short in Java is signed, so we need to use int to represent all possible values
-            SpecialRustType::U16 => "int".into(),
+            SpecialRustType::U16 => "Integer".into(),
             // ing in Java is signed, so we need to use long to represent all possible values
-            SpecialRustType::USize | SpecialRustType::U32 => "long".into(),
+            SpecialRustType::USize | SpecialRustType::U32 => "Long".into(),
             // long in Java is signed, so we need to use BigInteger to represent all possible values
             SpecialRustType::U53 | SpecialRustType::U64 => "java.math.BigInteger".into(),
             // https://docs.oracle.com/javase/specs/jls/se23/html/jls-4.html#jls-PrimitiveType
-            SpecialRustType::Bool => "boolean".into(),
+            SpecialRustType::Bool => "Boolean".into(),
             // https://docs.oracle.com/javase/specs/jls/se23/html/jls-4.html#jls-FloatingPointType
-            SpecialRustType::F32 => "float".into(),
-            SpecialRustType::F64 => "double".into(),
+            SpecialRustType::F32 => "Float".into(),
+            SpecialRustType::F64 => "Double".into(),
             _ => {
                 return Err(
                     FormatSpecialTypeError::UnsupportedSpecialType(special_ty.clone()).into(),

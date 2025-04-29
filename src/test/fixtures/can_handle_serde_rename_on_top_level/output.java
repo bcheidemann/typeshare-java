@@ -7,8 +7,8 @@ public class Namespace {
 	/// This is a comment.
 	public record PersonTwo(
 		String name,
-		short age,
-		int extraSpecialFieldOne,
+		Short age,
+		Integer extraSpecialFieldOne,
 		java.util.ArrayList<String> extraSpecialFieldTwo,
 		OtherType nonStandardDataType,
 		java.util.ArrayList<OtherType> nonStandardDataTypeInArray

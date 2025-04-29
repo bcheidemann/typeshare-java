@@ -6,8 +6,8 @@ public class Namespace {
 	public record Person(
 		String firstName,
 		String lastName,
-		short age,
-		int extraSpecialField1,
+		Short age,
+		Integer extraSpecialField1,
 		java.util.ArrayList<String> extraSpecialField2
 	) {}
 
@@ -15,7 +15,7 @@ public class Namespace {
 	public record Person2(
 		String FIRST_NAME,
 		String LAST_NAME,
-		short AGE
+		Short AGE
 	) {}
 
 }
