@@ -386,7 +386,7 @@ impl Java {
         }
 
         // Ensure each remaining characters is a valid "JavaLetterOrDigit"
-        while let Some(char) = chars.next() {
+        for char in chars {
             if !self.is_java_letter_or_number(char) {
                 return Err(AssertJavaIdentifierError::InvalidCharacter {
                     name: name.as_ref().to_string(),
@@ -607,6 +607,7 @@ impl Java {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn write_algebraic_enum_newtype_tuple_variant_gson(
         &self,
         w: &mut impl Write,
@@ -634,6 +635,7 @@ impl Java {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn write_algebraic_enum_anonymous_struct_variant_gson(
         &self,
         _w: &mut impl Write,
@@ -647,6 +649,7 @@ impl Java {
         todo!("algebraic enum variants with anonymous structs are not supported yet")
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn write_algebraic_enum_adapter_gson(
         &self,
         w: &mut impl Write,
