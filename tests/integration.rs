@@ -3,7 +3,7 @@ use std::fs;
 use assert_cmd::Command;
 use fixtures::fixtures;
 
-#[fixtures("src/test/fixtures/*")]
+#[fixtures("tests/fixtures/src/*")]
 fn integration_test(test_case_path: &std::path::Path) {
     let stdout = fs::read_to_string(test_case_path.join("stdout")).ok();
     let stderr = fs::read_to_string(test_case_path.join("stderr")).ok();
@@ -21,7 +21,7 @@ fn integration_test(test_case_path: &std::path::Path) {
         .expect("binary to execute")
         .args(vec![
             "--config",
-            "src/test/typeshare.toml",
+            "tests/typeshare.toml",
             "--output-file",
             temp_output_path.to_str().expect("to be UTF-8"),
             test_case_path.to_str().expect("to be UTF-8"),
