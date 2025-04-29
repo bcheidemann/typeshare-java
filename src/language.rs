@@ -223,6 +223,7 @@ impl Language<'_> for Java {
             IndentedWriter::new(w, if self.config.namespace_class { 1 } else { 0 });
 
         self.write_comments(&mut indented_writer, 0, &e.shared().comments)?;
+        self.write_annotations(&mut indented_writer, &e.shared().decorators)?;
 
         match e {
             RustEnum::Unit {
@@ -421,8 +422,6 @@ impl Java {
         shared: &RustEnumShared,
         unit_variants: &[RustEnumVariantShared],
     ) -> anyhow::Result<()> {
-        self.write_annotations(w, &shared.decorators)?;
-
         if !shared.generic_types.is_empty() {
             todo!("generic types on unit enums are not supported yet");
         }
