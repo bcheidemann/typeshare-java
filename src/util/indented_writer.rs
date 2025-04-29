@@ -16,6 +16,17 @@ impl<'a, W: Write> IndentedWriter<'a, W> {
     }
 }
 
+impl<W: Write> IndentedWriter<'_, W> {
+    pub fn indent(&mut self) {
+        self.indent_count += 1;
+    }
+
+    pub fn dedent(&mut self) {
+        assert!(self.indent_count != 0, "cannot decrement below 0");
+        self.indent_count -= 1;
+    }
+}
+
 impl<W: Write> Write for IndentedWriter<'_, W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let indent = "\t".repeat(self.indent_count);

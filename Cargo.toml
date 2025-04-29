@@ -10,12 +10,14 @@ homepage = "https://github.com/bcheidemann/typeshare-java"
 
 [dependencies]
 anyhow = "1.0.98"
-assert_cmd = "2.0.17"
 convert_case = "0.8.0"
-fixtures = "0.1.0"
-pretty_assertions = "1.4.1"
 serde = { version = "1.0.219", features = ["derive"] }
-tempfile = "3.19.1"
 thiserror = "2.0.12"
 typeshare-driver = "1.2.1"
 typeshare-model = "2.0.1"
+assert_cmd = "2.0.17"
+fixtures = "0.1.0"
+pretty_assertions = "1.4.1"
+tempfile = "3.19.1"
+
+[dev-dependencies]

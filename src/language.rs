@@ -8,8 +8,11 @@ use typeshare_model::prelude::*;
 
 use crate::config::HeaderComment;
 use crate::config::JavaConfig;
+use crate::config::JavaSerializerOptions;
+use crate::error::AssertJavaIdentifierError;
 use crate::error::FormatSpecialTypeError;
 use crate::error::WriteDecoratorError;
+use crate::error::WriteEnumError;
 use crate::util::indented_writer::IndentedWriter;
 
 #[derive(Debug)]
@@ -226,7 +229,18 @@ impl Language<'_> for Java {
                 shared,
                 unit_variants,
             } => self.write_unit_enum(&mut indented_writer, shared, unit_variants)?,
-            RustEnum::Algebraic { .. } => todo!("algebraic enums are not supported yet"),
+            RustEnum::Algebraic {
+                shared,
+                tag_key,
+                content_key,
+                variants,
+            } => self.write_algebraic_enum(
+                &mut indented_writer,
+                shared,
+                tag_key,
+                content_key,
+                variants,
+            )?,
         }
 
         writeln!(w)?;
@@ -354,6 +368,36 @@ impl Java {
         }
     }
 
+    fn assert_java_identifier<T: AsRef<str>>(&self, name: T) -> anyhow::Result<T> {
+        let mut chars = name.as_ref().chars();
+
+        // Ensure the first character is valid "JavaLetter"
+        match chars.next() {
+            Some(char) if self.is_java_letter(char) => {}
+            Some(char) => {
+                return Err(AssertJavaIdentifierError::InvalidCharacter {
+                    name: name.as_ref().to_string(),
+                    char,
+                }
+                .into());
+            }
+            None => return Err(AssertJavaIdentifierError::EmptyString.into()),
+        }
+
+        // Ensure each remaining characters is a valid "JavaLetterOrDigit"
+        while let Some(char) = chars.next() {
+            if !self.is_java_letter_or_number(char) {
+                return Err(AssertJavaIdentifierError::InvalidCharacter {
+                    name: name.as_ref().to_string(),
+                    char,
+                }
+                .into());
+            }
+        }
+
+        Ok(name)
+    }
+
     fn write_element(
         &self,
         w: &mut impl Write,
@@ -379,11 +423,15 @@ impl Java {
     ) -> anyhow::Result<()> {
         self.write_annotations(w, &shared.decorators)?;
 
+        if !shared.generic_types.is_empty() {
+            todo!("generic types on unit enums are not supported yet");
+        }
+
         writeln!(
             w,
             "public enum {}{} {{",
             self.config.prefix.as_ref().unwrap_or(&String::default()),
-            &shared.id.renamed
+            self.santitize_itentifier(shared.id.renamed.as_str()),
         )?;
 
         if let Some((last_variant, variants)) = unit_variants.split_last() {
@@ -403,6 +451,457 @@ impl Java {
             )?;
         }
 
+        writeln!(w, "}}")?;
+
+        Ok(())
+    }
+
+    fn write_algebraic_enum(
+        &self,
+        w: &mut impl Write,
+        shared: &RustEnumShared,
+        tag_key: &str,
+        content_key: &str,
+        variants: &[RustEnumVariant],
+    ) -> anyhow::Result<()> {
+        match self.config.serializer {
+            JavaSerializerOptions::None => {
+                Err(WriteEnumError::SerializerRequiredForAlgebraicEnums {
+                    name: shared.id.original.to_string(),
+                }
+                .into())
+            }
+            JavaSerializerOptions::Gson => {
+                self.write_algebraic_enum_gson(w, shared, tag_key, content_key, variants)
+            }
+        }
+    }
+
+    fn write_algebraic_enum_gson(
+        &self,
+        w: &mut impl Write,
+        shared: &RustEnumShared,
+        tag_key: &str,
+        content_key: &str,
+        variants: &[RustEnumVariant],
+    ) -> anyhow::Result<()> {
+        if !shared.generic_types.is_empty() {
+            todo!("generic types on unit enums are not supported yet");
+        }
+
+        let java_enum_identifier = self.santitize_itentifier(&format!(
+            "{}{}",
+            self.config.prefix.as_ref().unwrap_or(&String::default()),
+            shared.id.renamed.as_str(),
+        ));
+
+        let java_enum_adapter_identifier = format!("_{}Adapter", java_enum_identifier);
+
+        writeln!(
+            w,
+            "@com.google.gson.annotations.JsonAdapter({}.class)",
+            java_enum_adapter_identifier
+        )?;
+        writeln!(w, "public sealed interface {}", java_enum_identifier,)?;
+
+        let (variant_last, variants_rest) = variants
+            .split_last()
+            .expect("algebraic enum should have at least one variant");
+
+        writeln!(w, "\tpermits")?;
+        for variant in variants_rest {
+            writeln!(
+                w,
+                "\t\t{}.{},",
+                java_enum_identifier,
+                self.santitize_itentifier(variant.shared().id.renamed.as_str()),
+            )?;
+        }
+        writeln!(
+            w,
+            "\t\t{}.{} {{",
+            java_enum_identifier,
+            self.santitize_itentifier(variant_last.shared().id.renamed.as_str()),
+        )?;
+        writeln!(w)?;
+
+        let mut indented_writer = IndentedWriter::new(w, 1);
+
+        for variant in variants {
+            self.write_comments(&mut indented_writer, 0, &variant.shared().comments)?;
+
+            match variant {
+                RustEnumVariant::Unit(shared) => self.write_algebraic_enum_unit_variant_gson(
+                    &mut indented_writer,
+                    shared,
+                    &java_enum_identifier,
+                    &java_enum_adapter_identifier,
+                )?,
+                RustEnumVariant::Tuple {
+                    ty: variant_ty,
+                    shared: variant_shared,
+                } => {
+                    self.write_algebraic_enum_newtype_tuple_variant_gson(
+                        &mut indented_writer,
+                        shared,
+                        variant_shared,
+                        content_key,
+                        variant_ty,
+                        &java_enum_identifier,
+                        &java_enum_adapter_identifier,
+                    )?;
+                }
+                RustEnumVariant::AnonymousStruct {
+                    fields: variant_fields,
+                    shared: variant_shared,
+                } => {
+                    self.write_algebraic_enum_anonymous_struct_variant_gson(
+                        &mut indented_writer,
+                        shared,
+                        variant_shared,
+                        content_key,
+                        variant_fields,
+                        &java_enum_identifier,
+                        &java_enum_adapter_identifier,
+                    )?;
+                }
+                _ => return Err(WriteEnumError::UnsupportedEnumVariant(variant.clone()).into()),
+            }
+
+            writeln!(indented_writer)?;
+        }
+
+        writeln!(w, "}}")?;
+        writeln!(w)?;
+
+        self.write_algebraic_enum_adapter_gson(
+            w,
+            shared,
+            tag_key,
+            content_key,
+            variants,
+            &java_enum_identifier,
+            &java_enum_adapter_identifier,
+        )?;
+
+        Ok(())
+    }
+
+    fn write_algebraic_enum_unit_variant_gson(
+        &self,
+        w: &mut impl Write,
+        variant_shared: &RustEnumVariantShared,
+        java_enum_identifier: &str,
+        java_enum_adapter_identifier: &str,
+    ) -> anyhow::Result<()> {
+        writeln!(
+            w,
+            "@com.google.gson.annotations.JsonAdapter({}.class)",
+            java_enum_adapter_identifier
+        )?;
+        writeln!(
+            w,
+            "public record {}() implements {} {{}}",
+            self.santitize_itentifier(variant_shared.id.renamed.as_str()),
+            java_enum_identifier,
+        )?;
+        Ok(())
+    }
+
+    fn write_algebraic_enum_newtype_tuple_variant_gson(
+        &self,
+        w: &mut impl Write,
+        enum_shared: &RustEnumShared,
+        variant_shared: &RustEnumVariantShared,
+        content_key: &str,
+        ty: &RustType,
+        java_enum_identifier: &str,
+        java_enum_adapter_identifier: &str,
+    ) -> anyhow::Result<()> {
+        let ty = self.format_type(ty, enum_shared.generic_types.as_ref())?;
+        writeln!(
+            w,
+            "@com.google.gson.annotations.JsonAdapter({}.class)",
+            java_enum_adapter_identifier
+        )?;
+        writeln!(
+            w,
+            "public record {}({} {}) implements {} {{}}",
+            self.santitize_itentifier(variant_shared.id.renamed.as_str()),
+            ty,
+            self.assert_java_identifier(content_key)?,
+            java_enum_identifier,
+        )?;
+        Ok(())
+    }
+
+    fn write_algebraic_enum_anonymous_struct_variant_gson(
+        &self,
+        _w: &mut impl Write,
+        _enum_shared: &RustEnumShared,
+        _variant_shared: &RustEnumVariantShared,
+        _content_key: &str,
+        _fields: &[RustField],
+        _java_enum_identifier: &str,
+        _java_enum_adapter_identifier: &str,
+    ) -> anyhow::Result<()> {
+        todo!("algebraic enum variants with anonymous structs are not supported yet")
+    }
+
+    fn write_algebraic_enum_adapter_gson(
+        &self,
+        w: &mut impl Write,
+        shared: &RustEnumShared,
+        tag_key: &str,
+        content_key: &str,
+        variants: &[RustEnumVariant],
+        java_enum_identifier: &str,
+        java_enum_adapter_identifier: &str,
+    ) -> anyhow::Result<()> {
+        writeln!(
+            w,
+            "private final class {java_enum_adapter_identifier} extends com.google.gson.TypeAdapter<{java_enum_identifier}> {{",
+        )?;
+        writeln!(w)?;
+        writeln!(
+            w,
+            "\tprivate static com.google.gson.Gson gson = new com.google.gson.Gson();"
+        )?;
+        writeln!(w)?;
+
+        let mut indented_writer = IndentedWriter::new(w, 1);
+
+        self.write_algebraic_enum_adapter_write_method_gson(
+            &mut indented_writer,
+            tag_key,
+            content_key,
+            variants,
+            java_enum_identifier,
+        )?;
+        writeln!(indented_writer)?;
+
+        self.write_algebraic_enum_adapter_read_method_gson(
+            &mut indented_writer,
+            shared,
+            tag_key,
+            content_key,
+            variants,
+            java_enum_identifier,
+        )?;
+        writeln!(indented_writer)?;
+
+        writeln!(w, "}}")?;
+
+        Ok(())
+    }
+
+    fn write_algebraic_enum_adapter_write_method_gson(
+        &self,
+        w: &mut impl Write,
+        tag_key: &str,
+        content_key: &str,
+        variants: &[RustEnumVariant],
+        java_enum_identifier: &str,
+    ) -> anyhow::Result<()> {
+        writeln!(w, "@Override")?;
+        writeln!(w, "public void write(")?;
+        writeln!(w, "\tcom.google.gson.stream.JsonWriter out,")?;
+        writeln!(w, "\t{java_enum_identifier} value")?;
+        writeln!(w, ") throws java.io.IOException {{")?;
+
+        let mut indented_writer = IndentedWriter::new(w, 1);
+
+        for variant in variants {
+            writeln!(
+                indented_writer,
+                "if (value instanceof {java_enum_identifier}.{}) {{",
+                self.santitize_itentifier(variant.shared().id.renamed.as_str()),
+            )?;
+            indented_writer.indent();
+            match variant {
+                RustEnumVariant::Unit(shared) => {
+                    writeln!(indented_writer, "out.beginObject();")?;
+                    writeln!(indented_writer, "out.name(\"{}\");", tag_key)?;
+                    writeln!(indented_writer, "out.value(\"{}\");", shared.id.renamed)?;
+                    writeln!(indented_writer, "out.endObject();")?;
+                    writeln!(indented_writer, "return;")?;
+                }
+                RustEnumVariant::Tuple { shared, .. } => {
+                    writeln!(
+                        indented_writer,
+                        "var content = (({java_enum_identifier}.{}) value).{}();",
+                        self.santitize_itentifier(shared.id.renamed.as_str()),
+                        self.assert_java_identifier(content_key)?,
+                    )?;
+                    writeln!(indented_writer, "out.beginObject();")?;
+                    writeln!(indented_writer, "out.name(\"{}\");", tag_key)?;
+                    writeln!(indented_writer, "out.value(\"{}\");", shared.id.renamed)?;
+                    writeln!(indented_writer, "out.name(\"{}\");", content_key)?;
+                    writeln!(
+                        indented_writer,
+                        "gson.toJson(gson.toJsonTree(content), out);"
+                    )?;
+                    writeln!(indented_writer, "out.endObject();")?;
+                    writeln!(indented_writer, "return;")?;
+                }
+                RustEnumVariant::AnonymousStruct { .. } => {
+                    todo!("algebraic enum variants with anonymous structs are not supported yet")
+                }
+                _ => return Err(WriteEnumError::UnsupportedEnumVariant(variant.clone()).into()),
+            }
+            indented_writer.dedent();
+            writeln!(indented_writer, "}}")?;
+            writeln!(indented_writer)?;
+        }
+
+        writeln!(
+            indented_writer,
+            "throw new RuntimeException(\"unreachable!\");"
+        )?;
+        writeln!(w, "}}")?;
+
+        Ok(())
+    }
+
+    fn write_algebraic_enum_adapter_read_method_gson(
+        &self,
+        w: &mut impl Write,
+        enum_shared: &RustEnumShared,
+        tag_key: &str,
+        content_key: &str,
+        variants: &[RustEnumVariant],
+        java_enum_identifier: &str,
+    ) -> anyhow::Result<()> {
+        writeln!(w, "@Override")?;
+        writeln!(w, "public {java_enum_identifier} read(")?;
+        writeln!(w, "\tcom.google.gson.stream.JsonReader in")?;
+        writeln!(w, ") throws java.io.IOException {{")?;
+
+        let mut indented_writer = IndentedWriter::new(w, 1);
+
+        writeln!(
+            indented_writer,
+            "JsonObject jsonObject = gson.fromJson(in, JsonObject.class);"
+        )?;
+        writeln!(
+            indented_writer,
+            "JsonElement tagElement = jsonObject.get(\"{}\");",
+            tag_key
+        )?;
+        writeln!(indented_writer)?;
+        writeln!(indented_writer, "if (tagElement == null) {{")?;
+        writeln!(
+            indented_writer,
+            "\tthrow new java.io.IOException(\"Missing '{}' field for {java_enum_identifier}\");",
+            tag_key,
+        )?;
+        writeln!(indented_writer, "}}")?;
+        writeln!(indented_writer)?;
+        writeln!(indented_writer, "if (!tagElement.isJsonPrimitive()) {{")?;
+        writeln!(
+            indented_writer,
+            "\tthrow new java.io.IOException(\"Invalid '{}' field for {java_enum_identifier}\");",
+            tag_key,
+        )?;
+        writeln!(indented_writer, "}}")?;
+        writeln!(indented_writer)?;
+        writeln!(indented_writer, "String tag = tagElement.getAsString();")?;
+        writeln!(indented_writer)?;
+        writeln!(indented_writer, "return switch (tag) {{")?;
+
+        indented_writer.indent();
+
+        for variant in variants {
+            match variant {
+                RustEnumVariant::Unit(variant_shared) => {
+                    writeln!(
+                        indented_writer,
+                        "case \"{}\" -> new {java_enum_identifier}.{}();",
+                        variant_shared.id.renamed,
+                        self.santitize_itentifier(variant_shared.id.renamed.as_str()),
+                    )?;
+                }
+                RustEnumVariant::Tuple {
+                    ty,
+                    shared: variant_shared,
+                } => {
+                    writeln!(
+                        indented_writer,
+                        "case \"{}\" -> {{",
+                        variant_shared.id.renamed
+                    )?;
+                    indented_writer.indent();
+                    writeln!(
+                        indented_writer,
+                        "JsonElement contentElement = jsonObject.get(\"{}\");",
+                        content_key,
+                    )?;
+                    match ty {
+                        // For Option types, there's no need to check for null values
+                        RustType::Special(SpecialRustType::Option(_)) => {}
+                        // For all other types, ensure the content is not null (or missing)
+                        _ => {
+                            writeln!(indented_writer, "if (contentElement == null) {{")?;
+                            writeln!(
+                                indented_writer,
+                                "\tthrow new java.io.IOException(\"'{}' variant missing '{}'\");",
+                                variant_shared.id.renamed, content_key,
+                            )?;
+                            writeln!(indented_writer, "}}")?;
+                        }
+                    }
+                    if !enum_shared.generic_types.is_empty() {
+                        // EXPLANATION: The Gson TypeToken<T> constructor cannot accept types T<...K> where T is generic
+                        //              over types ...K. Such types can be represented using TypeToken.getParametarized(T.class, K.class, ...)
+                        //              but this requires some extra logic to be implemented here.
+                        // REFERENCE: https://github.com/google/gson/blob/259c477cecaea8e73cd19e5207ba63edc04157da/gson/src/main/java/com/google/gson/reflect/TypeToken.java#L40-L44
+                        todo!("algebraic enums with generic type parameters are not yet supported");
+                    }
+                    let java_ty = self.format_type(ty, &[])?;
+                    match ty {
+                        RustType::Special(SpecialRustType::Vec(_))
+                        | RustType::Special(SpecialRustType::Array(_, _))
+                        | RustType::Special(SpecialRustType::Slice(_))
+                        | RustType::Special(SpecialRustType::HashMap(_, _)) => {
+                            writeln!(
+                                indented_writer,
+                                "var contentType = new com.google.gson.reflect.TypeToken<{java_ty}>() {{}};"
+                            )?;
+                            writeln!(
+                                indented_writer,
+                                "{java_ty} content = gson.fromJson(contentElement, contentType);",
+                            )?
+                        }
+                        RustType::Special(SpecialRustType::Unit) => {
+                            todo!("algebraic enum variants with unit values are not supported yet")
+                        }
+                        _ => writeln!(
+                            indented_writer,
+                            "{java_ty} content = gson.fromJson(contentElement, {java_ty}.class);",
+                        )?,
+                    }
+                    writeln!(
+                        indented_writer,
+                        "yield new {java_enum_identifier}.{}(content);",
+                        self.santitize_itentifier(variant_shared.id.renamed.as_str()),
+                    )?;
+                    indented_writer.dedent();
+                    writeln!(indented_writer, "}}")?;
+                }
+                RustEnumVariant::AnonymousStruct { .. } => {
+                    todo!("algebraic enum variants with anonymous structs are not supported yet")
+                }
+                _ => return Err(WriteEnumError::UnsupportedEnumVariant(variant.clone()).into()),
+            }
+        }
+
+        writeln!(
+            indented_writer,
+            "default -> throw new java.io.IOException(\"Unknown variant: \" + tag);",
+        )?;
+
+        indented_writer.dedent();
+        writeln!(indented_writer, "}};")?;
         writeln!(w, "}}")?;
 
         Ok(())

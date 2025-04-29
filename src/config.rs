@@ -15,6 +15,8 @@ pub struct JavaConfig {
     pub type_mappings: HashMap<String, String>,
     /// Whether generated Java classes should be wrapped in a namespace class
     pub namespace_class: bool,
+    /// Output code for a specific serializer. Currently only Gson is supported.
+    pub serializer: JavaSerializerOptions,
 }
 
 impl Default for JavaConfig {
@@ -25,6 +27,7 @@ impl Default for JavaConfig {
             prefix: None,
             type_mappings: HashMap::with_capacity(0),
             namespace_class: true,
+            serializer: JavaSerializerOptions::None,
         }
     }
 }
@@ -35,4 +38,11 @@ pub enum HeaderComment {
     None,
     Custom { comment: String },
     Default,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum JavaSerializerOptions {
+    None,
+    Gson,
 }
