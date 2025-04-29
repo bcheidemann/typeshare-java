@@ -494,14 +494,13 @@ impl Java {
             shared.id.renamed.as_str(),
         ));
 
-        let java_enum_adapter_identifier = format!("_{}Adapter", java_enum_identifier);
+        let java_enum_adapter_identifier = format!("_{java_enum_identifier}Adapter");
 
         writeln!(
             w,
-            "@com.google.gson.annotations.JsonAdapter({}.class)",
-            java_enum_adapter_identifier
+            "@com.google.gson.annotations.JsonAdapter({java_enum_adapter_identifier}.class)",
         )?;
-        writeln!(w, "public sealed interface {}", java_enum_identifier,)?;
+        writeln!(w, "public sealed interface {java_enum_identifier}")?;
 
         let (variant_last, variants_rest) = variants
             .split_last()
@@ -595,14 +594,12 @@ impl Java {
     ) -> anyhow::Result<()> {
         writeln!(
             w,
-            "@com.google.gson.annotations.JsonAdapter({}.class)",
-            java_enum_adapter_identifier
+            "@com.google.gson.annotations.JsonAdapter({java_enum_adapter_identifier}.class)",
         )?;
         writeln!(
             w,
-            "public record {}() implements {} {{}}",
+            "public record {}() implements {java_enum_identifier} {{}}",
             self.santitize_itentifier(variant_shared.id.renamed.as_str()),
-            java_enum_identifier,
         )?;
         Ok(())
     }
@@ -621,8 +618,7 @@ impl Java {
         let ty = self.format_type(ty, enum_shared.generic_types.as_ref())?;
         writeln!(
             w,
-            "@com.google.gson.annotations.JsonAdapter({}.class)",
-            java_enum_adapter_identifier
+            "@com.google.gson.annotations.JsonAdapter({java_enum_adapter_identifier}.class)",
         )?;
         writeln!(
             w,
@@ -723,7 +719,7 @@ impl Java {
             match variant {
                 RustEnumVariant::Unit(shared) => {
                     writeln!(indented_writer, "out.beginObject();")?;
-                    writeln!(indented_writer, "out.name(\"{}\");", tag_key)?;
+                    writeln!(indented_writer, "out.name(\"{tag_key}\");")?;
                     writeln!(indented_writer, "out.value(\"{}\");", shared.id.renamed)?;
                     writeln!(indented_writer, "out.endObject();")?;
                     writeln!(indented_writer, "return;")?;
@@ -736,9 +732,9 @@ impl Java {
                         self.assert_java_identifier(content_key)?,
                     )?;
                     writeln!(indented_writer, "out.beginObject();")?;
-                    writeln!(indented_writer, "out.name(\"{}\");", tag_key)?;
+                    writeln!(indented_writer, "out.name(\"{tag_key}\");")?;
                     writeln!(indented_writer, "out.value(\"{}\");", shared.id.renamed)?;
-                    writeln!(indented_writer, "out.name(\"{}\");", content_key)?;
+                    writeln!(indented_writer, "out.name(\"{content_key}\");")?;
                     writeln!(
                         indented_writer,
                         "gson.toJson(gson.toJsonTree(content), out);"
@@ -787,23 +783,20 @@ impl Java {
         )?;
         writeln!(
             indented_writer,
-            "JsonElement tagElement = jsonObject.get(\"{}\");",
-            tag_key
+            "JsonElement tagElement = jsonObject.get(\"{tag_key}\");",
         )?;
         writeln!(indented_writer)?;
         writeln!(indented_writer, "if (tagElement == null) {{")?;
         writeln!(
             indented_writer,
-            "\tthrow new java.io.IOException(\"Missing '{}' field for {java_enum_identifier}\");",
-            tag_key,
+            "\tthrow new java.io.IOException(\"Missing '{tag_key}' field for {java_enum_identifier}\");",
         )?;
         writeln!(indented_writer, "}}")?;
         writeln!(indented_writer)?;
         writeln!(indented_writer, "if (!tagElement.isJsonPrimitive()) {{")?;
         writeln!(
             indented_writer,
-            "\tthrow new java.io.IOException(\"Invalid '{}' field for {java_enum_identifier}\");",
-            tag_key,
+            "\tthrow new java.io.IOException(\"Invalid '{tag_key}' field for {java_enum_identifier}\");",
         )?;
         writeln!(indented_writer, "}}")?;
         writeln!(indented_writer)?;
@@ -835,8 +828,7 @@ impl Java {
                     indented_writer.indent();
                     writeln!(
                         indented_writer,
-                        "JsonElement contentElement = jsonObject.get(\"{}\");",
-                        content_key,
+                        "JsonElement contentElement = jsonObject.get(\"{content_key}\");",
                     )?;
                     match ty {
                         // For Option types, there's no need to check for null values
