@@ -17,6 +17,18 @@ Then, install the annotations:
 cargo add typeshare
 ```
 
+## Feature Support
+
+| Feature         | Status | Comment                                         |
+|-----------------|--------|-------------------------------------------------|
+| Structs         | ✅     | -                                               |
+| Struct Generics | ✅     | -                                               |
+| Unit Enums      | ✅     | -                                               |
+| Algebraic Enums | 🚧     | Gson only. Anonymous structs not supported yet. |
+| Enum Generics   | ❌     | -                                               |
+| Type Aliases    | ❌     | -                                               |
+| Constants       | ❌     | -                                               |
+
 ## Usage
 
 ### CLI
