@@ -1,0 +1,11 @@
+[java]
+header_comment = { type = "None" }
+package = "com.typeshare.java"
+namespace_class = true
+
+[java.serializer]
+type = "Gson"
+
+[java.indent]
+type = "Spaces"
+size = 4

@@ -3,14 +3,16 @@ use std::io::{self, Write};
 pub struct IndentedWriter<'a, W: Write> {
     inner: &'a mut W,
     at_line_start: bool,
+    indent_char: char,
     indent_count: usize,
 }
 
 impl<'a, W: Write> IndentedWriter<'a, W> {
-    pub fn new(inner: &'a mut W, indent_count: usize) -> Self {
+    pub fn new(inner: &'a mut W, indent_char: char, indent_count: usize) -> Self {
         Self {
             inner,
             at_line_start: true,
+            indent_char,
             indent_count,
         }
     }
@@ -29,7 +31,7 @@ impl<W: Write> IndentedWriter<'_, W> {
 
 impl<W: Write> Write for IndentedWriter<'_, W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let indent = "\t".repeat(self.indent_count);
+        let indent = self.indent_char.to_string().repeat(self.indent_count);
         let indent_bytes = indent.as_bytes();
         let mut written_to = 0;
 
@@ -65,7 +67,7 @@ mod tests {
         // Arrange
         let mut buffer = Vec::new();
         let mut writer = io::Cursor::new(&mut buffer);
-        let mut indented_writer = IndentedWriter::new(&mut writer, 1);
+        let mut indented_writer = IndentedWriter::new(&mut writer, '\t', 1);
 
         // Act
         write!(indented_writer, "").unwrap();
@@ -80,7 +82,7 @@ mod tests {
         // Arrange
         let mut buffer = Vec::new();
         let mut writer = io::Cursor::new(&mut buffer);
-        let mut indented_writer = IndentedWriter::new(&mut writer, 0);
+        let mut indented_writer = IndentedWriter::new(&mut writer, '\t', 0);
 
         // Act
         writeln!(indented_writer, "first line").unwrap();
@@ -95,7 +97,7 @@ mod tests {
         // Arrange
         let mut buffer = Vec::new();
         let mut writer = io::Cursor::new(&mut buffer);
-        let mut indented_writer = IndentedWriter::new(&mut writer, 1);
+        let mut indented_writer = IndentedWriter::new(&mut writer, '\t', 1);
 
         // Act
         writeln!(indented_writer, "first line").unwrap();
@@ -110,7 +112,7 @@ mod tests {
         // Arrange
         let mut buffer = Vec::new();
         let mut writer = io::Cursor::new(&mut buffer);
-        let mut indented_writer = IndentedWriter::new(&mut writer, 2);
+        let mut indented_writer = IndentedWriter::new(&mut writer, '\t', 2);
 
         // Act
         writeln!(indented_writer, "first line").unwrap();
@@ -125,7 +127,7 @@ mod tests {
         // Arrange
         let mut buffer = Vec::new();
         let mut writer = io::Cursor::new(&mut buffer);
-        let mut indented_writer = IndentedWriter::new(&mut writer, 0);
+        let mut indented_writer = IndentedWriter::new(&mut writer, '\t', 0);
 
         // Act
         writeln!(indented_writer, "first line").unwrap();
@@ -141,7 +143,7 @@ mod tests {
         // Arrange
         let mut buffer = Vec::new();
         let mut writer = io::Cursor::new(&mut buffer);
-        let mut indented_writer = IndentedWriter::new(&mut writer, 1);
+        let mut indented_writer = IndentedWriter::new(&mut writer, '\t', 1);
 
         // Act
         writeln!(indented_writer, "first line").unwrap();
@@ -157,7 +159,7 @@ mod tests {
         // Arrange
         let mut buffer = Vec::new();
         let mut writer = io::Cursor::new(&mut buffer);
-        let mut indented_writer = IndentedWriter::new(&mut writer, 2);
+        let mut indented_writer = IndentedWriter::new(&mut writer, '\t', 2);
 
         // Act
         writeln!(indented_writer, "first line").unwrap();
@@ -173,7 +175,7 @@ mod tests {
         // Arrange
         let mut buffer = Vec::new();
         let mut writer = io::Cursor::new(&mut buffer);
-        let mut indented_writer = IndentedWriter::new(&mut writer, 2);
+        let mut indented_writer = IndentedWriter::new(&mut writer, '\t', 2);
 
         // Act
         writeln!(indented_writer, "first line").unwrap();

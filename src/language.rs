@@ -183,8 +183,15 @@ impl Language<'_> for Java {
     }
 
     fn write_struct(&self, w: &mut impl Write, rs: &RustStruct) -> anyhow::Result<()> {
-        let mut indented_writer =
-            IndentedWriter::new(w, if self.config.namespace_class { 1 } else { 0 });
+        let mut indented_writer = IndentedWriter::new(
+            w,
+            self.config.indent.char(),
+            if self.config.namespace_class {
+                self.config.indent.size()
+            } else {
+                0
+            },
+        );
 
         self.write_multiline_comment(&mut indented_writer, 0, &rs.comments)?;
 
@@ -219,8 +226,15 @@ impl Language<'_> for Java {
     fn write_enum(&self, w: &mut impl Write, e: &RustEnum) -> anyhow::Result<()> {
         // TODO: Generate named types for any anonymous struct variants of this enum
 
-        let mut indented_writer =
-            IndentedWriter::new(w, if self.config.namespace_class { 1 } else { 0 });
+        let mut indented_writer = IndentedWriter::new(
+            w,
+            self.config.indent.char(),
+            if self.config.namespace_class {
+                self.config.indent.size()
+            } else {
+                0
+            },
+        );
 
         self.write_multiline_comment(&mut indented_writer, 0, &e.shared().comments)?;
         self.write_annotations(&mut indented_writer, &e.shared().decorators)?;
@@ -255,6 +269,14 @@ impl Language<'_> for Java {
 }
 
 impl Java {
+    fn indent<S: AsRef<str>>(&self, line: S, indent: usize) -> String {
+        self.config.indent.indent(line, indent)
+    }
+
+    fn indent_whitespace(&self, indent: usize) -> String {
+        self.indent("", indent)
+    }
+
     #[inline]
     fn is_java_letter(&self, c: char) -> bool {
         // https://docs.oracle.com/javase/specs/jls/se23/html/jls-3.html#jls-JavaLetter
@@ -409,7 +431,8 @@ impl Java {
         let ty = self.format_type(&f.ty, generic_types)?;
         write!(
             w,
-            "\t{} {}",
+            "{}{} {}",
+            self.indent_whitespace(1),
             ty,
             self.santitize_itentifier(f.id.renamed.as_str()),
         )
@@ -438,14 +461,16 @@ impl Java {
                 self.write_multiline_comment(w, 1, &variant.comments)?;
                 writeln!(
                     w,
-                    "\t{},",
+                    "{}{},",
+                    self.indent_whitespace(1),
                     self.santitize_itentifier(variant.id.renamed.as_str()),
                 )?;
             }
             self.write_multiline_comment(w, 1, &last_variant.comments)?;
             writeln!(
                 w,
-                "\t{}",
+                "{}{}",
+                self.indent_whitespace(1),
                 self.santitize_itentifier(last_variant.id.renamed.as_str()),
             )?;
         }
@@ -506,24 +531,26 @@ impl Java {
             .split_last()
             .expect("algebraic enum should have at least one variant");
 
-        writeln!(w, "\tpermits")?;
+        writeln!(w, "{}permits", self.indent_whitespace(1))?;
         for variant in variants_rest {
             writeln!(
                 w,
-                "\t\t{}.{},",
+                "{}{}.{},",
+                self.indent_whitespace(2),
                 java_enum_identifier,
                 self.santitize_itentifier(variant.shared().id.renamed.as_str()),
             )?;
         }
         writeln!(
             w,
-            "\t\t{}.{} {{",
+            "{}{}.{} {{",
+            self.indent_whitespace(2),
             java_enum_identifier,
             self.santitize_itentifier(variant_last.shared().id.renamed.as_str()),
         )?;
         writeln!(w)?;
 
-        let mut indented_writer = IndentedWriter::new(w, 1);
+        let mut indented_writer = self.config.indent.to_indented_writer(w);
 
         for variant in variants {
             self.write_multiline_comment(&mut indented_writer, 0, &variant.shared().comments)?;
@@ -663,11 +690,12 @@ impl Java {
         writeln!(w)?;
         writeln!(
             w,
-            "\tprivate static com.google.gson.Gson gson = new com.google.gson.Gson();"
+            "{}private static com.google.gson.Gson gson = new com.google.gson.Gson();",
+            self.indent_whitespace(1),
         )?;
         writeln!(w)?;
 
-        let mut indented_writer = IndentedWriter::new(w, 1);
+        let mut indented_writer = self.config.indent.to_indented_writer(w);
 
         self.write_algebraic_enum_adapter_write_method_gson(
             &mut indented_writer,
@@ -703,11 +731,19 @@ impl Java {
     ) -> anyhow::Result<()> {
         writeln!(w, "@Override")?;
         writeln!(w, "public void write(")?;
-        writeln!(w, "\tcom.google.gson.stream.JsonWriter out,")?;
-        writeln!(w, "\t{java_enum_identifier} value")?;
+        writeln!(
+            w,
+            "{}com.google.gson.stream.JsonWriter out,",
+            self.indent_whitespace(1),
+        )?;
+        writeln!(
+            w,
+            "{}{java_enum_identifier} value",
+            self.indent_whitespace(1),
+        )?;
         writeln!(w, ") throws java.io.IOException {{")?;
 
-        let mut indented_writer = IndentedWriter::new(w, 1);
+        let mut indented_writer = self.config.indent.to_indented_writer(w);
 
         for variant in variants {
             writeln!(
@@ -772,10 +808,14 @@ impl Java {
     ) -> anyhow::Result<()> {
         writeln!(w, "@Override")?;
         writeln!(w, "public {java_enum_identifier} read(")?;
-        writeln!(w, "\tcom.google.gson.stream.JsonReader in")?;
+        writeln!(
+            w,
+            "{}com.google.gson.stream.JsonReader in",
+            self.indent_whitespace(1),
+        )?;
         writeln!(w, ") throws java.io.IOException {{")?;
 
-        let mut indented_writer = IndentedWriter::new(w, 1);
+        let mut indented_writer = self.config.indent.to_indented_writer(w);
 
         writeln!(
             indented_writer,
@@ -789,14 +829,16 @@ impl Java {
         writeln!(indented_writer, "if (tagElement == null) {{")?;
         writeln!(
             indented_writer,
-            "\tthrow new java.io.IOException(\"Missing '{tag_key}' field for {java_enum_identifier}\");",
+            "{}throw new java.io.IOException(\"Missing '{tag_key}' field for {java_enum_identifier}\");",
+            self.indent_whitespace(1),
         )?;
         writeln!(indented_writer, "}}")?;
         writeln!(indented_writer)?;
         writeln!(indented_writer, "if (!tagElement.isJsonPrimitive()) {{")?;
         writeln!(
             indented_writer,
-            "\tthrow new java.io.IOException(\"Invalid '{tag_key}' field for {java_enum_identifier}\");",
+            "{}throw new java.io.IOException(\"Invalid '{tag_key}' field for {java_enum_identifier}\");",
+            self.indent_whitespace(1),
         )?;
         writeln!(indented_writer, "}}")?;
         writeln!(indented_writer)?;
@@ -945,7 +987,7 @@ impl Java {
         indent: usize,
         comment: &str,
     ) -> std::io::Result<()> {
-        writeln!(w, "{} * {}", "\t".repeat(indent), comment)?;
+        writeln!(w, "{} * {}", self.indent_whitespace(indent), comment,)?;
         Ok(())
     }
 
@@ -959,11 +1001,11 @@ impl Java {
             return Ok(());
         }
 
-        writeln!(w, "{}/**", "\t".repeat(indent))?;
+        writeln!(w, "{}/**", self.indent_whitespace(indent))?;
         comment_lines
             .iter()
             .try_for_each(|comment| self.write_multiline_comment_line(w, indent, comment))?;
-        writeln!(w, "{} */", "\t".repeat(indent))?;
+        writeln!(w, "{} */", self.indent_whitespace(indent))?;
 
         Ok(())
     }

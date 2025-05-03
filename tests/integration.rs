@@ -5,6 +5,14 @@ use fixtures::fixtures;
 
 #[fixtures("tests/fixtures/src/*")]
 fn integration_test(test_case_path: &std::path::Path) {
+    let override_config_path = test_case_path.join("typeshare.toml");
+    let default_config_path = "tests/typeshare.toml";
+    let effective_config_path = {
+        override_config_path
+            .exists()
+            .then(|| override_config_path.to_str().expect("to be valid UTF-8"))
+            .unwrap_or(default_config_path)
+    };
     let stdout = fs::read_to_string(test_case_path.join("stdout")).ok();
     let stderr = fs::read_to_string(test_case_path.join("stderr")).ok();
     let exitcode = fs::read_to_string(test_case_path.join("exitcode"))
@@ -21,7 +29,7 @@ fn integration_test(test_case_path: &std::path::Path) {
         .expect("binary to execute")
         .args(vec![
             "--config",
-            "tests/typeshare.toml",
+            effective_config_path,
             "--output-file",
             temp_output_path.to_str().expect("to be UTF-8"),
             test_case_path.to_str().expect("to be UTF-8"),

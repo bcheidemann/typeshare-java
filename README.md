@@ -193,3 +193,13 @@ type = "None"
 // Or...
 type = "Gson"
 ```
+
+#### `indent`
+
+The indent type and size can be configured as follows:
+
+```toml
+[java.indent]
+type = "Spaces"
+size = 4
+```
