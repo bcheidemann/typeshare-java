@@ -1,6 +1,5 @@
-fn main() {
-    println!("cargo:rerun-if-changed=build.rs");
+use fixtures::build::watch_fixture_dir;
 
-    // Watch the fixtures directory to re-run tests if new fixtures are added
-    println!("cargo:rerun-if-changed=tests/fixtures");
+fn main() {
+    watch_fixture_dir("cargo:rerun-if-changed=tests/fixtures");
 }

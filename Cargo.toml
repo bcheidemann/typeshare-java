@@ -16,8 +16,11 @@ thiserror = "2.0.12"
 typeshare-driver = "1.2.1"
 typeshare-model = "2.0.1"
 assert_cmd = "2.0.17"
-fixtures = "0.1.0"
 pretty_assertions = "1.4.1"
 tempfile = "3.19.1"
 
 [dev-dependencies]
+fixtures = "1"
+
+[build-dependencies]
+fixtures = "1"

@@ -243,11 +243,20 @@ checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
 name = "fixtures"
-version = "0.1.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ee641ed7294dab290809e5a675dae1d3a48fa31e62b94974b25490194f3a96a"
+checksum = "136d9fe9e0e49a89faaf9ef15ac705c2b1e6d36aaf4ea0de2488126c3ec20870"
 dependencies = [
- "glob",
+ "fixtures_proc",
+]
+
+[[package]]
+name = "fixtures_proc"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4faf907bc72d6dfbfce409c0939b961e6d29380bb25aa2786b709db9b38e7986"
+dependencies = [
+ "globwalk",
  "proc-macro2",
  "quote",
  "syn",
@@ -266,12 +275,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "glob"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8d1add55171497b4705a648c6b583acafb01d58050a51727785f0b2c8e0a2b2"
-
-[[package]]
 name = "globset"
 version = "0.4.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -282,6 +285,17 @@ dependencies = [
  "log",
  "regex-automata",
  "regex-syntax",
+]
+
+[[package]]
+name = "globwalk"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bf760ebf69878d9fd8f110c89703d90ce35095324d1f1edcb595c63945ee757"
+dependencies = [
+ "bitflags",
+ "ignore",
+ "walkdir",
 ]
 
 [[package]]

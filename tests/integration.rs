@@ -3,7 +3,10 @@ use std::fs;
 use assert_cmd::Command;
 use fixtures::fixtures;
 
-#[fixtures("tests/fixtures/src/*")]
+#[fixtures([
+    "tests/fixtures/src/*",
+    "!tests/fixtures/src/*.skip",
+])]
 fn integration_test(test_case_path: &std::path::Path) {
     let override_config_path = test_case_path.join("typeshare.toml");
     let default_config_path = "tests/typeshare.toml";
