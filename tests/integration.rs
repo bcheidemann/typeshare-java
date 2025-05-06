@@ -3,6 +3,10 @@ use std::fs;
 use assert_cmd::Command;
 use fixtures::fixtures;
 
+#[fixtures(["tests/fixtures/src/*.skip"])]
+#[ignore]
+fn ignored_integration_test(_: &std::path::Path) {}
+
 #[fixtures([
     "tests/fixtures/src/*",
     "!tests/fixtures/src/*.skip",
