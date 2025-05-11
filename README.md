@@ -145,6 +145,9 @@ file:
 package = "com.typeshare.java"
 namespace_class = true
 
+[java.type_mappings]
+Uuid = "java.util.UUID"
+
 [java.header_comment]
 type = "None"
 
