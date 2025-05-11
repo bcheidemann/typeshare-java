@@ -30,3 +30,9 @@ pub enum AssertJavaIdentifierError {
     #[error("Invalid Java identifier: Empty string")]
     EmptyString,
 }
+
+#[derive(Error, Debug)]
+pub enum WriteConstError {
+    #[error("Unsupported const expression {0:?}")]
+    UnsupportedConstExpression(RustConstExpr),
+}

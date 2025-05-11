@@ -11,6 +11,7 @@ use crate::config::JavaConfig;
 use crate::config::JavaSerializerOptions;
 use crate::error::AssertJavaIdentifierError;
 use crate::error::FormatSpecialTypeError;
+use crate::error::WriteConstError;
 use crate::error::WriteDecoratorError;
 use crate::error::WriteEnumError;
 use crate::util::indented_writer::IndentedWriter;
@@ -266,8 +267,23 @@ impl Language<'_> for Java {
         Ok(())
     }
 
-    fn write_const(&self, _w: &mut impl Write, _c: &RustConst) -> anyhow::Result<()> {
-        todo!("constants are not supported yet")
+    fn write_const(&self, w: &mut impl Write, c: &RustConst) -> anyhow::Result<()> {
+        if !self.config.namespace_class {
+            todo!("constants are currently only supported with the namespace class option");
+        }
+        let mut indented_writer = self.config.indent.to_indented_writer(w);
+        let literal = match c.expr {
+            RustConstExpr::Int(int) => int.to_string(),
+            _ => return Err(WriteConstError::UnsupportedConstExpression(c.expr.clone()).into()),
+        };
+        writeln!(
+            indented_writer,
+            "static {} {} = {literal};",
+            self.format_type(&c.ty, &[])?,
+            self.santitize_itentifier(c.id.renamed.as_str()),
+        )?;
+        writeln!(indented_writer)?;
+        Ok(())
     }
 }
 

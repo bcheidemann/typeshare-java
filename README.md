@@ -27,7 +27,7 @@ cargo add typeshare
 | Algebraic Enums | ✅     | Gson only.                                      |
 | Enum Generics   | ❌     | -                                               |
 | Type Aliases    | ❌     | -                                               |
-| Constants       | ❌     | -                                               |
+| Constants       | 🚧     | Only with namespace class option.               |
 
 ## Data Types
 
