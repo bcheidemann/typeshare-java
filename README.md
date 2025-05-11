@@ -154,6 +154,29 @@ type = "Gson"
 
 #### Options
 
+##### `type-mappings`
+
+Rust types can be mapped to custom Java types.
+
+```toml
+[java.type_mappings]
+Uuid = "java.util.UUID"
+```
+
+The above config results in the following Rust to Java conversion:
+
+```rs
+struct User {
+    pub id: Uuid,
+}
+```
+
+```java
+record User(
+    java.util.UUID id
+) {}
+```
+
 ##### `header-comment`
 
 A header comment can be added to each generated file.

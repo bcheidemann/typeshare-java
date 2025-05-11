@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::Write;
 
 use convert_case::{Case, Casing as _};
@@ -28,6 +29,13 @@ impl Language<'_> for Java {
 
     fn new_from_config(config: Self::Config) -> anyhow::Result<Self> {
         Ok(Self { config })
+    }
+
+    fn mapped_type(&self, type_name: &TypeName) -> Option<Cow<'_, str>> {
+        self.config
+            .type_mappings
+            .get(type_name.as_str())
+            .map(Cow::from)
     }
 
     fn output_filename_for_crate(&self, crate_name: &CrateName) -> String {
