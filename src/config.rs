@@ -45,7 +45,7 @@ pub enum HeaderComment {
     Default,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum JavaSerializerOptions {
     None,

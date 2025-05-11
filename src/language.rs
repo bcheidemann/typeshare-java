@@ -224,7 +224,9 @@ impl Language<'_> for Java {
     }
 
     fn write_enum(&self, w: &mut impl Write, e: &RustEnum) -> anyhow::Result<()> {
-        // TODO: Generate named types for any anonymous struct variants of this enum
+        if self.config.serializer == JavaSerializerOptions::Gson {
+            self.write_struct_types_for_enum_variants_gson(w, e)?;
+        }
 
         let mut indented_writer = IndentedWriter::new(
             w,
@@ -421,6 +423,14 @@ impl Java {
         Ok(name)
     }
 
+    fn make_anonymous_struct_name_for_enum(
+        &self,
+        enum_shared: &RustEnumShared,
+        ty: &TypeName,
+    ) -> String {
+        self.santitize_itentifier(&format!("{}{}Inner", enum_shared.id.renamed, ty))
+    }
+
     fn write_element(
         &self,
         w: &mut impl Write,
@@ -501,6 +511,16 @@ impl Java {
         }
     }
 
+    fn write_struct_types_for_enum_variants_gson(
+        &self,
+        w: &mut impl Write,
+        e: &RustEnum,
+    ) -> anyhow::Result<()> {
+        self.write_struct_types_for_enum_variants(w, e, &|ty| {
+            self.make_anonymous_struct_name_for_enum(e.shared(), ty)
+        })
+    }
+
     fn write_algebraic_enum_gson(
         &self,
         w: &mut impl Write,
@@ -577,7 +597,7 @@ impl Java {
                     )?;
                 }
                 RustEnumVariant::AnonymousStruct {
-                    fields: variant_fields,
+                    fields: _vairant_fields,
                     shared: variant_shared,
                 } => {
                     self.write_algebraic_enum_anonymous_struct_variant_gson(
@@ -585,7 +605,6 @@ impl Java {
                         shared,
                         variant_shared,
                         content_key,
-                        variant_fields,
                         &java_enum_identifier,
                         &java_enum_adapter_identifier,
                     )?;
@@ -661,15 +680,28 @@ impl Java {
     #[allow(clippy::too_many_arguments)]
     fn write_algebraic_enum_anonymous_struct_variant_gson(
         &self,
-        _w: &mut impl Write,
-        _enum_shared: &RustEnumShared,
-        _variant_shared: &RustEnumVariantShared,
-        _content_key: &str,
-        _fields: &[RustField],
-        _java_enum_identifier: &str,
-        _java_enum_adapter_identifier: &str,
+        w: &mut impl Write,
+        enum_shared: &RustEnumShared,
+        variant_shared: &RustEnumVariantShared,
+        content_key: &str,
+        java_enum_identifier: &str,
+        java_enum_adapter_identifier: &str,
     ) -> anyhow::Result<()> {
-        todo!("algebraic enum variants with anonymous structs are not supported yet")
+        let ty_inner =
+            self.make_anonymous_struct_name_for_enum(enum_shared, &variant_shared.id.original);
+        writeln!(
+            w,
+            "@com.google.gson.annotations.JsonAdapter({java_enum_adapter_identifier}.class)",
+        )?;
+        writeln!(
+            w,
+            "public record {}({} {}) implements {} {{}}",
+            self.santitize_itentifier(variant_shared.id.renamed.as_str()),
+            ty_inner,
+            self.assert_java_identifier(content_key)?,
+            java_enum_identifier,
+        )?;
+        Ok(())
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -753,23 +785,38 @@ impl Java {
             )?;
             indented_writer.indent();
             match variant {
-                RustEnumVariant::Unit(shared) => {
+                RustEnumVariant::Unit(variant_shared) => {
                     writeln!(indented_writer, "out.beginObject();")?;
                     writeln!(indented_writer, "out.name(\"{tag_key}\");")?;
-                    writeln!(indented_writer, "out.value(\"{}\");", shared.id.renamed)?;
+                    writeln!(
+                        indented_writer,
+                        "out.value(\"{}\");",
+                        variant_shared.id.renamed
+                    )?;
                     writeln!(indented_writer, "out.endObject();")?;
                     writeln!(indented_writer, "return;")?;
                 }
-                RustEnumVariant::Tuple { shared, .. } => {
+                RustEnumVariant::Tuple {
+                    shared: variant_shared,
+                    ..
+                }
+                | RustEnumVariant::AnonymousStruct {
+                    shared: variant_shared,
+                    ..
+                } => {
                     writeln!(
                         indented_writer,
                         "var content = (({java_enum_identifier}.{}) value).{}();",
-                        self.santitize_itentifier(shared.id.renamed.as_str()),
+                        self.santitize_itentifier(variant_shared.id.renamed.as_str()),
                         self.assert_java_identifier(content_key)?,
                     )?;
                     writeln!(indented_writer, "out.beginObject();")?;
                     writeln!(indented_writer, "out.name(\"{tag_key}\");")?;
-                    writeln!(indented_writer, "out.value(\"{}\");", shared.id.renamed)?;
+                    writeln!(
+                        indented_writer,
+                        "out.value(\"{}\");",
+                        variant_shared.id.renamed
+                    )?;
                     writeln!(indented_writer, "out.name(\"{content_key}\");")?;
                     writeln!(
                         indented_writer,
@@ -777,9 +824,6 @@ impl Java {
                     )?;
                     writeln!(indented_writer, "out.endObject();")?;
                     writeln!(indented_writer, "return;")?;
-                }
-                RustEnumVariant::AnonymousStruct { .. } => {
-                    todo!("algebraic enum variants with anonymous structs are not supported yet")
                 }
                 _ => return Err(WriteEnumError::UnsupportedEnumVariant(variant.clone()).into()),
             }
@@ -924,8 +968,42 @@ impl Java {
                     indented_writer.dedent();
                     writeln!(indented_writer, "}}")?;
                 }
-                RustEnumVariant::AnonymousStruct { .. } => {
-                    todo!("algebraic enum variants with anonymous structs are not supported yet")
+                RustEnumVariant::AnonymousStruct {
+                    shared: variant_shared,
+                    ..
+                } => {
+                    writeln!(
+                        indented_writer,
+                        "case \"{}\" -> {{",
+                        variant_shared.id.renamed
+                    )?;
+                    indented_writer.indent();
+                    writeln!(
+                        indented_writer,
+                        "JsonElement contentElement = jsonObject.get(\"{content_key}\");",
+                    )?;
+                    writeln!(indented_writer, "if (contentElement == null) {{")?;
+                    writeln!(
+                        indented_writer,
+                        "\tthrow new java.io.IOException(\"'{}' variant missing '{}'\");",
+                        variant_shared.id.renamed, content_key,
+                    )?;
+                    writeln!(indented_writer, "}}")?;
+                    let ty_inner = self.make_anonymous_struct_name_for_enum(
+                        enum_shared,
+                        &variant_shared.id.original,
+                    );
+                    writeln!(
+                        indented_writer,
+                        "{ty_inner} content = gson.fromJson(contentElement, {ty_inner}.class);",
+                    )?;
+                    writeln!(
+                        indented_writer,
+                        "yield new {java_enum_identifier}.{}(content);",
+                        self.santitize_itentifier(variant_shared.id.renamed.as_str()),
+                    )?;
+                    indented_writer.dedent();
+                    writeln!(indented_writer, "}}")?;
                 }
                 _ => return Err(WriteEnumError::UnsupportedEnumVariant(variant.clone()).into()),
             }
