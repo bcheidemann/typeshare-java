@@ -24,7 +24,7 @@ cargo add typeshare
 | Structs         | ✅     | -                                               |
 | Struct Generics | ✅     | -                                               |
 | Unit Enums      | ✅     | -                                               |
-| Algebraic Enums | 🚧     | Gson only. Anonymous structs not supported yet. |
+| Algebraic Enums | ✅     | Gson only.                                      |
 | Enum Generics   | ❌     | -                                               |
 | Type Aliases    | ❌     | -                                               |
 | Constants       | ❌     | -                                               |
