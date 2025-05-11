@@ -62,7 +62,8 @@ impl Language<'_> for Java {
             SpecialRustType::Unit => "Void".into(),
             // https://docs.oracle.com/javase/specs/jls/se23/html/jls-4.html#jls-IntegralType
             // Char in Java is 16 bits long, so we need to use String
-            SpecialRustType::String | SpecialRustType::Char => "String".into(),
+            SpecialRustType::String => "String".into(),
+            SpecialRustType::Char => "Character".into(),
             SpecialRustType::I8 => "Byte".into(),
             SpecialRustType::I16 => "Short".into(),
             SpecialRustType::ISize | SpecialRustType::I32 => "Integer".into(),
