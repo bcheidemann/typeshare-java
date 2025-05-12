@@ -184,7 +184,7 @@ public class Namespace {
 					if (contentElement == null) {
 						throw new java.io.IOException("'NumberArray' variant missing 'content'");
 					}
-					var contentType = new com.google.gson.reflect.TypeToken<java.util.ArrayList<Integer>>() {};
+					com.google.gson.reflect.TypeToken<java.util.ArrayList<Integer>> contentType = new com.google.gson.reflect.TypeToken<java.util.ArrayList<Integer>>() {};
 					java.util.ArrayList<Integer> content = gson.fromJson(contentElement, contentType);
 					yield new AdvancedColors.NumberArray(content);
 				}

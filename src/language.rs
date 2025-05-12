@@ -970,7 +970,7 @@ impl Java {
                         | RustType::Special(SpecialRustType::HashMap(_, _)) => {
                             writeln!(
                                 indented_writer,
-                                "var contentType = new com.google.gson.reflect.TypeToken<{java_ty}>() {{}};"
+                                "com.google.gson.reflect.TypeToken<{java_ty}> contentType = new com.google.gson.reflect.TypeToken<{java_ty}>() {{}};"
                             )?;
                             writeln!(
                                 indented_writer,
