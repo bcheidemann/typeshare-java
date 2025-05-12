@@ -980,6 +980,16 @@ impl Java {
                         RustType::Special(SpecialRustType::Unit) => {
                             todo!("algebraic enum variants with unit values are not supported yet")
                         }
+                        RustType::Generic { .. } => {
+                            writeln!(
+                                indented_writer,
+                                "com.google.gson.reflect.TypeToken<{java_ty}> contentType = new com.google.gson.reflect.TypeToken<{java_ty}>() {{}};"
+                            )?;
+                            writeln!(
+                                indented_writer,
+                                "{java_ty} content = gson.fromJson(contentElement, contentType);",
+                            )?
+                        }
                         _ => writeln!(
                             indented_writer,
                             "{java_ty} content = gson.fromJson(contentElement, {java_ty}.class);",
