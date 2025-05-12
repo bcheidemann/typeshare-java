@@ -37,7 +37,7 @@ cargo add typeshare
 | `[T; N]`        | `T[]`                     | There is no fixed length array type in Java.                                               |
 | `&[T]`          | `T[]`                     | -                                                                                          |
 | `HashMap<K, V>` | `java.util.HashMap<K, V>` | -                                                                                          |
-| `Option<T>      | `T`                       | All types in Java are nullable.                                                            |
+| `Option<T>`     | `T`                       | All types in Java are nullable.                                                            |
 | `Unit`          | `Void`                    | -                                                                                          |
 | `String`        | `String`                  | -                                                                                          |
 | `char`          | `Character`               | -                                                                                          |
